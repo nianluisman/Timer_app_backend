@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_restful import reqparse, abort, Api, Resource
+import sqlite3 as db
 
 app = Flask(__name__)
 api = Api(app)
@@ -18,12 +19,48 @@ def abort_if_todo_doesnt_exist(todo_id):
 parser = reqparse.RequestParser()
 parser.add_argument('task')
 
+class _database_todo_interface:
 
+    def load_data_into_db(self, task: str):
+        pass
+    def get_data_from_fb(self):
+        pass
+
+class todo_dataBase_parser(_database_todo_interface):
+
+    def __init__(self):
+        self.con = db.connect("tutorial.db")
+        self.cur = self.con.cursor()
+
+    def load_data_into_db(self, task: str):
+        """
+        put a task into the database. 
+        """
+        try: 
+            self.cur.execute("create table if not exists todos(task)")
+            self.cur.execute("INSERT INTO todos VALUES (?)", (task,))
+            print(("INSERT INTO todos VALUES ('%s')", task))
+            self.con.commit()
+        except(db.ProgrammingError) as e:
+            raise RuntimeError(f"error insert: {e}")
+
+        # if self.cur.fetchone()[0] == 1:
+        # else:
+        #     self.cur.execute("INSERT INTO todos VALUES ('{task}') ")
+
+    def get_data_from_fb(self):
+        pass
 # Todo
 # shows a single todo item and lets you delete a todo item
 class Todo(Resource):
+
+    def __init__(self):
+        self.to_do_database = todo_dataBase_parser()
+
+
     def get(self, todo_id):
         abort_if_todo_doesnt_exist(todo_id)
+        TODOS[todo_id] = {"task": todo_id}
         return TODOS[todo_id]
 
     def delete(self, todo_id):
@@ -35,6 +72,9 @@ class Todo(Resource):
         args = parser.parse_args()
         task = {'task': args['task']}
         TODOS[todo_id] = task
+        print( args['task'])
+        self.to_do_database.load_data_into_db(args['task'])
+
         return task, 201
 
 
@@ -59,4 +99,5 @@ api.add_resource(Todo, '/todos/<todo_id>')
 
 
 if __name__ == '__main__':
+
     app.run(debug=True)
