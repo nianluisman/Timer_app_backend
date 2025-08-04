@@ -1,3 +1,5 @@
+from enum import Enum
+
 from flask import Flask
 from flask_restful import reqparse, abort, Api, Resource
 import sqlite3 as db
@@ -27,10 +29,18 @@ class _database_todo_interface:
         pass
 
 class todo_dataBase_parser(_database_todo_interface):
+    class erros(Enum):
+        COULD_NOT_ADD_TASK = -1
+        TASK_NOT_FOUND = -2
+        COUND_NOT_CONNECT = -3
+    
 
     def __init__(self):
-        self.con = db.connect("tutorial.db")
-        self.cur = self.con.cursor()
+        try:
+            self.con = db.connect("tutorial.db")
+            self.cur = self.con.cursor()
+        except(db.DatabaseError) as e:
+            raise RuntimeError(f"{self.erros.COUND_NOT_CONNECT} cound to find database {e}")
 
     def load_data_into_db(self, task: str):
         """
@@ -41,8 +51,9 @@ class todo_dataBase_parser(_database_todo_interface):
             self.cur.execute("INSERT INTO todos VALUES (?)", (task,))
             print(("INSERT INTO todos VALUES ('%s')", task))
             self.con.commit()
+            
         except(db.ProgrammingError) as e:
-            raise RuntimeError(f"error insert: {e}")
+            raise RuntimeError(f"({self.erros.COULD_NOT_ADD_TASK}) error insert: {e}")
 
         # if self.cur.fetchone()[0] == 1:
         # else:
